@@ -1,7 +1,7 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:crypto';
 import { prisma } from './db';
 
-const KEYS = ['stripe.secretKey', 'stripe.webhookSecret', 'stripe.connectSecret', 'stripe.publishableKey', 'paypal.clientSecret', 'paypal.webhookId', 'adapty.apiKey', 'adapty.webhookSecret', 'auth.google.clientSecret', 'auth.apple.privateKey'] as const;
+const KEYS = ['stripe.secretKey', 'stripe.webhookSecret', 'stripe.connectSecret', 'stripe.publishableKey', 'paypal.clientSecret', 'paypal.webhookId', 'adapty.apiKey', 'adapty.webhookSecret', 'auth.google.clientSecret', 'auth.apple.privateKey', 'rtc.turnCredential'] as const;
 type SecretKey = typeof KEYS[number];
 
 function encryptionKey() {
@@ -143,4 +143,26 @@ export async function readProviderFlags(provider: 'paypal'|'adapty') {
   const keys = provider === 'paypal' ? ['paypal.enabled','paypal.environment','paypal.clientId'] : ['adapty.enabled','adapty.publicKey'];
   const rows = await prisma.platformSetting.findMany({ where: { key: { in: keys } }, select: { key: true, value: true } });
   return Object.fromEntries(rows.map(row => [row.key, row.value]));
+}
+
+export async function readRtcConfig() {
+  const rows = await prisma.platformSetting.findMany({ where: { key: { in: ['rtc.stunUrls', 'rtc.turnUrls', 'rtc.turnUsername', 'rtc.turnCredential'] } }, select: { key: true, value: true } });
+  const values = Object.fromEntries(rows.map(row => [row.key, row.value]));
+  const read = (key: string, env: string) => { const value = values[key]; if (typeof value === 'string' && value.startsWith('v1:')) return decrypt(value); return typeof value === 'string' ? value : process.env[env] || ''; };
+  const parseUrls = (value: string) => value.split(/[\n,]+/).map(item => item.trim()).filter(Boolean).slice(0, 20);
+  return { stunUrls: parseUrls(read('rtc.stunUrls', 'TURN_URL')), turnUrls: parseUrls(read('rtc.turnUrls', 'TURN_URL')), turnUsername: read('rtc.turnUsername', 'TURN_USERNAME'), turnCredential: read('rtc.turnCredential', 'TURN_CREDENTIAL') };
+}
+
+export async function rtcConfigStatus() {
+  const config = await readRtcConfig();
+  return { stunUrls: config.stunUrls, turnUrls: config.turnUrls, turnUsername: config.turnUsername ? 'configured' : '', turnCredential: config.turnCredential ? 'configured' : '', turnConfigured: Boolean(config.turnUrls.length && config.turnUsername && config.turnCredential) };
+}
+
+export async function saveRtcConfig(input: { stunUrls: string[]; turnUrls: string[]; turnUsername: string; turnCredential?: string }, adminId?: string) {
+  const values: Record<string, unknown> = { 'rtc.stunUrls': input.stunUrls.join('\n'), 'rtc.turnUrls': input.turnUrls.join('\n'), 'rtc.turnUsername': input.turnUsername.trim() };
+  if (input.turnCredential) values['rtc.turnCredential'] = encrypt(input.turnCredential);
+  await prisma.$transaction(async tx => {
+    for (const [key, value] of Object.entries(values)) await tx.platformSetting.upsert({ where: { key }, create: { key, value: value as never }, update: { value: value as never } });
+    if (adminId) await tx.adminAuditLog.create({ data: { adminId, action: 'RTC_SETTINGS_UPDATED', metadata: { stunCount: input.stunUrls.length, turnCount: input.turnUrls.length, credentialReplaced: Boolean(input.turnCredential) } } });
+  });
 }
