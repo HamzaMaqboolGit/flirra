@@ -1,0 +1,871 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  MALE
+  FEMALE
+  ADMIN
+}
+
+enum AccountType {
+  USER
+  CREATOR
+}
+
+enum CreatorStatus {
+  NOT_APPLIED
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum GuestGender {
+  MALE
+  FEMALE
+  PREFER_NOT_TO_SAY
+}
+
+enum AccountStatus {
+  ACTIVE
+  SUSPENDED
+  BANNED
+  DELETED
+}
+
+enum CallStatus {
+  RINGING
+  ACTIVE
+  COMPLETED
+  REJECTED
+  CANCELLED
+  FAILED
+  TERMINATED
+}
+
+enum ParticipantRole {
+  CALLER
+  RECIPIENT
+}
+
+enum TransactionType {
+  PURCHASE
+  CALL_SPEND
+  GIFT_SENT
+  EARNING_SETTLED
+  COMMISSION
+  REFUND
+  WITHDRAWAL_HOLD
+  WITHDRAWAL_RELEASE
+  WITHDRAWAL_PAID
+  ADJUSTMENT
+  PROMOTIONAL_REWARD
+}
+
+enum WithdrawalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+  PARTIALLY_REFUNDED
+}
+
+enum IdentityStatus {
+  UNVERIFIED
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum ReportStatus {
+  OPEN
+  REVIEWING
+  RESOLVED
+  DISMISSED
+}
+
+model User {
+  id               String        @id @default(cuid())
+  email            String        @unique
+  passwordHash     String
+  displayName      String
+  username         String?       @unique
+  dateOfBirth      DateTime?
+  role             Role
+  accountType      AccountType   @default(USER)
+  creatorStatus    CreatorStatus @default(NOT_APPLIED)
+  status           AccountStatus @default(ACTIVE)
+  emailVerifiedAt  DateTime?
+  deletedAt        DateTime?
+  deactivatedAt    DateTime?
+  isGuest          Boolean       @default(false)
+  guestExpiresAt   DateTime?
+  stripeCustomerId String?       @unique
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  profile                  UserProfile?
+  wallet                   Wallet?
+  sessions                 UserSession[]
+  payoutAccount            PayoutAccount?
+  photos                   UserPhoto[]
+  notifications            Notification[]
+  payments                 Payment[]
+  subscriptionEntitlements SubscriptionEntitlement[]
+  adaptyEvents             AdaptyEvent[]
+  transactions             CoinTransaction[]
+  withdrawals              WithdrawalRequest[]
+  sentCalls                VideoCall[]               @relation("Caller")
+  receivedCalls            VideoCall[]               @relation("Recipient")
+  participations           CallParticipant[]
+  earnings                 Earning[]
+  reportsMade              UserReport[]              @relation("Reporter")
+  reportsReceived          UserReport[]              @relation("Reported")
+  reportsReviewed          UserReport[]              @relation("ReportReviewer")
+  blocksMade               BlockedUser[]             @relation("Blocker")
+  blocksReceived           BlockedUser[]             @relation("Blocked")
+  auditLogs                AdminAuditLog[]
+  refundsIssued            Refund[]                  @relation("RefundAdmin")
+  passwordResets           PasswordResetToken[]
+  emailTokens              EmailVerificationToken[]
+  rewardClaims             RewardClaim[]
+  cmsMedia                 CmsMedia[]                @relation("CmsMediaUploader")
+  cmsRevisions             CmsRevision[]             @relation("CmsRevisionAuthor")
+  follows                  Follow[]                  @relation("MemberFollows")
+  followers                Follow[]                  @relation("MemberFollowers")
+  sentGifts                CallGift[]                @relation("GiftSender")
+  receivedGifts            CallGift[]                @relation("GiftRecipient")
+  conversationsA           Conversation[]            @relation("ConversationMemberA")
+  conversationsB           Conversation[]            @relation("ConversationMemberB")
+  supportAgent             SupportAgent?
+  adminStaff               AdminStaff?
+  oauthAccounts            OAuthAccount[]
+  guestMilestones          GuestMilestone[]
+  assignedSupportRequests  SupportRequest[]          @relation("SupportAssignedAgent")
+  supportNotes             SupportInternalNote[]
+  supportRatings           SupportRating[]
+  supportRequests          SupportRequest[]          @relation("SupportRequester")
+  chatMessages             ChatMessage[]             @relation("ChatMessageSender")
+  stories                  UserStory[]
+  storyViews               UserStoryView[]           @relation("StoryViewer")
+  storyReports             StoryReport[]             @relation("StoryReportReporter")
+  reportedStories          StoryReport[]             @relation("StoryReportOwner")
+}
+
+model UserProfile {
+  userId           String       @id
+  guestGender      GuestGender?
+  country          String       @default("")
+  city             String       @default("")
+  bio              String       @default("")
+  interests        Json         @default("[]")
+  avatarUrl        String?
+  online           Boolean      @default(false)
+  discoverable     Boolean      @default(true)
+  discoverFeatured Boolean      @default(false)
+  accountSettings  Json         @default("{}")
+  lastSeenAt       DateTime?
+  updatedAt        DateTime     @updatedAt
+  user             User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model UserPhoto {
+  id        String   @id @default(cuid())
+  userId    String
+  url       String
+  position  Int      @default(0)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, position])
+}
+
+model UserSession {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+}
+
+model OAuthAccount {
+  id                String   @id @default(cuid())
+  provider          String
+  providerAccountId String
+  userId            String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model GuestMilestone {
+  id          String   @id @default(cuid())
+  userId      String
+  milestone   String
+  dismissedAt DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, milestone])
+  @@index([userId, dismissedAt])
+}
+
+model AdminStaff {
+  id          String                 @id @default(cuid())
+  userId      String                 @unique
+  phone       String                 @default("")
+  department  String                 @default("")
+  staffRole   String                 @default("ADMIN")
+  permissions Json                   @default("[]")
+  enabled     Boolean                @default(true)
+  lastLoginAt DateTime?
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+  user        User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  invitations AdminStaffInvitation[]
+}
+
+model AdminStaffInvitation {
+  id         String     @id @default(cuid())
+  staffId    String
+  tokenHash  String     @unique
+  expiresAt  DateTime
+  acceptedAt DateTime?
+  createdAt  DateTime   @default(now())
+  staff      AdminStaff @relation(fields: [staffId], references: [id], onDelete: Cascade)
+
+  @@index([staffId, expiresAt])
+}
+
+model EmailVerificationToken {
+  id           String   @id @default(cuid())
+  userId       String
+  tokenHash    String   @unique
+  expiresAt    DateTime
+  pendingEmail String?
+  createdAt    DateTime @default(now())
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Wallet {
+  id               String @id @default(cuid())
+  userId           String @unique
+  coinBalance      Int    @default(0)
+  promotionalCoins Int    @default(0)
+  pendingCredits   Int    @default(0)
+  availableCredits Int    @default(0)
+  lifetimeCredits  Int    @default(0)
+  user             User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model CoinPackage {
+  id          String    @id @default(cuid())
+  name        String
+  description String    @default("")
+  coins       Int
+  priceCents  Int
+  active      Boolean   @default(true)
+  sortOrder   Int       @default(0)
+  currency    String    @default("USD")
+  bonusCoins  Int       @default(0)
+  cardColor   String    @default("lilac")
+  imageUrl    String    @default("")
+  popular     Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  payments    Payment[]
+}
+
+model CoinTransaction {
+  id               String          @id @default(cuid())
+  userId           String
+  type             TransactionType
+  coins            Int             @default(0)
+  promotionalCoins Int             @default(0)
+  credits          Int             @default(0)
+  amountCents      Int             @default(0)
+  idempotencyKey   String          @unique
+  metadata         Json?
+  createdAt        DateTime        @default(now())
+  user             User            @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([userId, createdAt])
+  @@index([type, createdAt])
+}
+
+model RewardClaim {
+  id         String    @id @default(cuid())
+  userId     String
+  rewardType String
+  coins      Int
+  expiresAt  DateTime?
+  claimKey   String    @unique
+  metadata   Json?
+  createdAt  DateTime  @default(now())
+  user       User      @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([userId, rewardType, createdAt])
+}
+
+model Payment {
+  id                String        @id @default(cuid())
+  userId            String
+  packageId         String?
+  provider          String
+  providerSessionId String?       @unique
+  providerPaymentId String?       @unique
+  status            PaymentStatus @default(PENDING)
+  coins             Int
+  amountCents       Int
+  currency          String        @default("USD")
+  refundedCents     Int           @default(0)
+  checkoutRequestId String?       @unique
+  failureReason     String?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  user              User          @relation(fields: [userId], references: [id], onDelete: Restrict)
+  package           CoinPackage?  @relation(fields: [packageId], references: [id], onDelete: SetNull)
+  refunds           Refund[]
+
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+}
+
+model StripeEvent {
+  id        String   @id
+  type      String
+  createdAt DateTime @default(now())
+}
+
+model SubscriptionEntitlement {
+  id            String    @id @default(cuid())
+  userId        String
+  provider      String    @default("adapty")
+  accessLevelId String
+  productId     String?
+  status        String
+  willRenew     Boolean   @default(false)
+  expiresAt     DateTime?
+  lastUpdatedAt DateTime  @default(now())
+  user          User      @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, provider, accessLevelId])
+  @@index([userId, status, expiresAt])
+}
+
+model AdaptyEvent {
+  id         String   @id
+  userId     String?
+  eventType  String
+  payload    Json
+  receivedAt DateTime @default(now())
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId, receivedAt])
+}
+
+model Refund {
+  id               String   @id @default(cuid())
+  paymentId        String
+  adminId          String?
+  amountCents      Int
+  coinsReversed    Int
+  providerRefundId String?
+  reason           String
+  createdAt        DateTime @default(now())
+  payment          Payment  @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  admin            User?    @relation("RefundAdmin", fields: [adminId], references: [id], onDelete: SetNull)
+
+  @@index([paymentId])
+}
+
+model VideoCall {
+  id                 String              @id @default(cuid())
+  callerId           String
+  recipientId        String
+  countryFilter      String              @default("Worldwide")
+  status             CallStatus          @default(RINGING)
+  startedAt          DateTime?
+  endedAt            DateTime?
+  endReason          String?
+  endedById          String?
+  billableSeconds    Int                 @default(0)
+  coinsCharged       Int                 @default(0)
+  womanCredits       Int                 @default(0)
+  companyCredits     Int                 @default(0)
+  lastBilledMinute   Int                 @default(0)
+  hiddenForCaller    Boolean             @default(false)
+  hiddenForRecipient Boolean             @default(false)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  caller             User                @relation("Caller", fields: [callerId], references: [id], onDelete: Restrict)
+  recipient          User                @relation("Recipient", fields: [recipientId], references: [id], onDelete: Restrict)
+  participants       CallParticipant[]
+  billingRecords     CallBillingRecord[]
+  earnings           Earning[]
+  commissions        CompanyCommission[]
+  gifts              CallGift[]
+
+  @@index([callerId, createdAt])
+  @@index([recipientId, createdAt])
+  @@index([status, createdAt])
+}
+
+model Conversation {
+  id              String           @id @default(cuid())
+  memberAId       String
+  memberBId       String
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  officialKey     String?          @unique
+  memberA         User             @relation("ConversationMemberA", fields: [memberAId], references: [id], onDelete: Cascade)
+  memberB         User             @relation("ConversationMemberB", fields: [memberBId], references: [id], onDelete: Cascade)
+  messages        ChatMessage[]
+  supportRequests SupportRequest[]
+  gifts           CallGift[]
+
+  @@unique([memberAId, memberBId])
+  @@index([memberAId, updatedAt])
+  @@index([memberBId, updatedAt])
+}
+
+enum SupportRequestStatus {
+  WAITING
+  ASSIGNED
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+  CANCELLED
+}
+
+model SupportFAQ {
+  id        String   @id @default(cuid())
+  question  String   @db.VarChar(200)
+  answer    String   @db.VarChar(4000)
+  category  String   @default("General")
+  keywords  Json         @default("[]")
+  followUps Json?
+  sortOrder Int      @default(0)
+  enabled   Boolean  @default(true)
+  escalate  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([enabled, sortOrder])
+}
+
+model SupportAgent {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  availability String   @default("OFFLINE")
+  maxChats     Int      @default(3)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model SupportRequest {
+  id              String                @id @default(cuid())
+  userId          String
+  conversationId  String
+  status          SupportRequestStatus  @default(WAITING)
+  priority        Int                   @default(0)
+  assignedAgentId String?
+  createdAt       DateTime              @default(now())
+  assignedAt      DateTime?
+  resolvedAt      DateTime?
+  closedAt        DateTime?
+  updatedAt       DateTime              @updatedAt
+  user            User                  @relation("SupportRequester", fields: [userId], references: [id], onDelete: Cascade)
+  conversation    Conversation          @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  assignedAgent   User?                 @relation("SupportAssignedAgent", fields: [assignedAgentId], references: [id], onDelete: SetNull)
+  notes           SupportInternalNote[]
+  rating          SupportRating?
+
+  @@index([status, priority, createdAt])
+  @@index([userId, status])
+}
+
+model SupportInternalNote {
+  id        String         @id @default(cuid())
+  requestId String
+  agentId   String
+  body      String         @db.VarChar(2000)
+  createdAt DateTime       @default(now())
+  request   SupportRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  agent     User           @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@index([requestId, createdAt])
+}
+
+model SupportRating {
+  id        String         @id @default(cuid())
+  requestId String         @unique
+  userId    String
+  stars     Int
+  feedback  String?        @db.VarChar(1000)
+  createdAt DateTime       @default(now())
+  request   SupportRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ChatMessage {
+  id             String       @id @default(cuid())
+  conversationId String
+  senderId       String
+  clientId       String?
+  body           String       @db.VarChar(2000)
+  attachmentUrl  String?
+  attachmentPath String?
+  attachmentMime String?
+  deliveredAt    DateTime?
+  readAt         DateTime?
+  createdAt      DateTime     @default(now())
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender         User         @relation("ChatMessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@unique([senderId, clientId])
+  @@index([conversationId, createdAt])
+  @@index([conversationId, readAt, senderId])
+}
+
+model Gift {
+  id        String     @id @default(cuid())
+  name      String
+  imageUrl  String     @default("")
+  coins     Int
+  category  String     @default("Popular")
+  featured  Boolean    @default(false)
+  enabled   Boolean    @default(true)
+  sortOrder Int        @default(0)
+  createdAt DateTime   @default(now())
+  sent      CallGift[]
+
+  @@index([enabled, sortOrder])
+}
+
+model CallGift {
+  id             String        @id @default(cuid())
+  giftId         String
+  callId         String?
+  conversationId String?
+  senderId       String
+  recipientId    String
+  name           String
+  coins          Int
+  idempotencyKey String        @unique
+  createdAt      DateTime      @default(now())
+  gift           Gift          @relation(fields: [giftId], references: [id], onDelete: Restrict)
+  call           VideoCall?    @relation(fields: [callId], references: [id], onDelete: Cascade)
+  conversation   Conversation? @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender         User          @relation("GiftSender", fields: [senderId], references: [id], onDelete: Restrict)
+  recipient      User          @relation("GiftRecipient", fields: [recipientId], references: [id], onDelete: Restrict)
+
+  @@index([callId, createdAt])
+  @@index([conversationId, createdAt])
+  @@index([recipientId, createdAt])
+}
+
+model CallParticipant {
+  id          String          @id @default(cuid())
+  callId      String
+  userId      String
+  role        ParticipantRole
+  consentedAt DateTime?
+  joinedAt    DateTime?
+  leftAt      DateTime?
+  call        VideoCall       @relation(fields: [callId], references: [id], onDelete: Cascade)
+  user        User            @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@unique([callId, userId])
+  @@index([userId])
+}
+
+model CallBillingRecord {
+  id             String    @id @default(cuid())
+  callId         String
+  minuteNumber   Int
+  coins          Int
+  womanCredits   Int
+  companyCredits Int
+  idempotencyKey String    @unique
+  createdAt      DateTime  @default(now())
+  call           VideoCall @relation(fields: [callId], references: [id], onDelete: Restrict)
+
+  @@unique([callId, minuteNumber])
+}
+
+model Earning {
+  id             String    @id @default(cuid())
+  userId         String
+  callId         String
+  minuteNumber   Int
+  credits        Int
+  status         String    @default("PENDING")
+  idempotencyKey String    @unique
+  createdAt      DateTime  @default(now())
+  user           User      @relation(fields: [userId], references: [id], onDelete: Restrict)
+  call           VideoCall @relation(fields: [callId], references: [id], onDelete: Restrict)
+
+  @@unique([callId, minuteNumber])
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+}
+
+model CompanyCommission {
+  id             String    @id @default(cuid())
+  callId         String
+  minuteNumber   Int
+  credits        Int
+  idempotencyKey String    @unique
+  createdAt      DateTime  @default(now())
+  call           VideoCall @relation(fields: [callId], references: [id], onDelete: Restrict)
+
+  @@unique([callId, minuteNumber])
+}
+
+model WithdrawalRequest {
+  id             String           @id @default(cuid())
+  userId         String
+  amountCredits  Int
+  amountCents    Int
+  status         WithdrawalStatus @default(PENDING)
+  decisionReason String?
+  payoutRef      String?
+  processedAt    DateTime?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  user           User             @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([status, createdAt])
+  @@index([userId, createdAt])
+}
+
+model PayoutAccount {
+  id                   String         @id @default(cuid())
+  userId               String         @unique
+  legalName            String         @default("")
+  country              String         @default("")
+  method               String         @default("MANUAL")
+  accountHint          String         @default("")
+  bankDetailsEncrypted String?
+  providerAccountRef   String?
+  identityStatus       IdentityStatus @default(UNVERIFIED)
+  verifiedAt           DateTime?
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+  user                 User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model UserReport {
+  id             String       @id @default(cuid())
+  reporterId     String
+  reportedId     String
+  callId         String?
+  conversationId String?
+  reason         String
+  details        String?
+  priority       String       @default("NORMAL")
+  severity       String       @default("UNASSESSED")
+  source         String       @default("USER_REPORT")
+  evidenceRef    String?
+  reviewedById   String?
+  reviewedAt     DateTime?
+  reviewNotes    String?
+  appealStatus   String       @default("NONE")
+  status         ReportStatus @default(OPEN)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  reporter       User         @relation("Reporter", fields: [reporterId], references: [id], onDelete: Restrict)
+  reported       User         @relation("Reported", fields: [reportedId], references: [id], onDelete: Restrict)
+  reviewedBy     User?        @relation("ReportReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@index([reportedId, createdAt])
+}
+
+model BlockedUser {
+  blockerId String
+  blockedId String
+  createdAt DateTime @default(now())
+  blocker   User     @relation("Blocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked   User     @relation("Blocked", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@id([blockerId, blockedId])
+}
+
+model Follow {
+  followerId  String
+  followingId String
+  createdAt   DateTime @default(now())
+  follower    User     @relation("MemberFollows", fields: [followerId], references: [id], onDelete: Cascade)
+  following   User     @relation("MemberFollowers", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@id([followerId, followingId])
+  @@index([followingId, createdAt])
+}
+
+model UserStory {
+  id         String          @id @default(cuid())
+  ownerId    String
+  mediaUrl   String
+  mediaType  String
+  mimeType   String          @default("application/octet-stream")
+  caption    String          @default("")
+  createdAt  DateTime        @default(now())
+  expiresAt  DateTime
+  visibility String          @default("PUBLIC")
+  owner      User            @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  views      UserStoryView[]
+
+  @@index([ownerId, expiresAt])
+  @@index([visibility, expiresAt])
+}
+
+model UserStoryView {
+  viewerId String
+  storyId  String
+  viewedAt DateTime  @default(now())
+  viewer   User      @relation("StoryViewer", fields: [viewerId], references: [id], onDelete: Cascade)
+  story    UserStory @relation(fields: [storyId], references: [id], onDelete: Cascade)
+
+  @@id([viewerId, storyId])
+  @@index([storyId, viewedAt])
+}
+
+model StoryReport {
+  id         String   @id @default(cuid())
+  storyId    String
+  reporterId String
+  ownerId    String
+  reason     String
+  details    String?
+  status     String   @default("OPEN")
+  createdAt  DateTime @default(now())
+  reporter   User     @relation("StoryReportReporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  owner      User     @relation("StoryReportOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@unique([storyId, reporterId])
+  @@index([status, createdAt])
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  kind      String
+  payload   Json
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt, createdAt])
+}
+
+model AdminAuditLog {
+  id        String   @id @default(cuid())
+  adminId   String
+  action    String
+  targetId  String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+  admin     User     @relation(fields: [adminId], references: [id], onDelete: Restrict)
+
+  @@index([adminId, createdAt])
+  @@index([action, createdAt])
+}
+
+model PlatformSetting {
+  key       String   @id
+  value     Json?
+  updatedAt DateTime @updatedAt
+}
+
+model CmsPage {
+  id               String        @id @default(cuid())
+  slug             String        @unique
+  title            String
+  draftContent     Json
+  publishedContent Json?
+  publishedAt      DateTime?
+  updatedAt        DateTime      @updatedAt
+  createdAt        DateTime      @default(now())
+  revisions        CmsRevision[]
+}
+
+model CmsRevision {
+  id        String   @id @default(cuid())
+  pageId    String
+  authorId  String
+  content   Json
+  createdAt DateTime @default(now())
+  page      CmsPage  @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  author    User     @relation("CmsRevisionAuthor", fields: [authorId], references: [id], onDelete: Restrict)
+
+  @@index([pageId, createdAt])
+}
+
+model CmsMedia {
+  id           String   @id @default(cuid())
+  url          String   @unique
+  filename     String
+  mimeType     String
+  sizeBytes    Int
+  altText      String   @default("")
+  uploadedById String
+  createdAt    DateTime @default(now())
+  uploadedBy   User     @relation("CmsMediaUploader", fields: [uploadedById], references: [id], onDelete: Restrict)
+
+  @@index([createdAt])
+}
+
+model ContactMessage {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  topic     String
+  message   String
+  createdAt DateTime @default(now())
+}
+
+/// Shared, persistent rate-limit state for the MySQL runtime.
+/// `bucketKey` is a server-derived hash; raw IP/email values must never be stored.
+model RateLimitBucket {
+  bucketKey    String   @id @db.VarChar(191)
+  count        Int      @default(0)
+  windowStart  DateTime
+  expiresAt    DateTime
+  updatedAt    DateTime @updatedAt
+
+  @@index([expiresAt])
+}
