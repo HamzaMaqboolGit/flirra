@@ -1,0 +1,2 @@
+-- Sound preferences are stored in existing JSON settings to avoid a schema change.
+-- Admin sound catalog and policy use PlatformSetting JSON keys.

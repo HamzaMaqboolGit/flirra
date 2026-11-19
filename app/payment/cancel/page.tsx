@@ -1,0 +1,3 @@
+import { ArrowLeft, Wallet } from 'lucide-react';
+import '@/app/design-system.css';
+export default function PaymentCancelPage(){return <main className="payment-result-root"><section className="payment-result-card"><span className="payment-result-icon"><Wallet size={28}/></span><small>VELORA WALLET</small><h1>Checkout cancelled</h1><p>No coins were added. You can return to your wallet and try again whenever you’re ready.</p><div className="payment-result-actions"><a href="/wallet"><Wallet size={16}/> Return to wallet</a><a href="/dashboard"><ArrowLeft size={16}/> Back to video chat</a></div></section></main>}

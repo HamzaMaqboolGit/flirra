@@ -1,0 +1,1 @@
+ALTER TABLE "VideoCall" ADD COLUMN "endedById" TEXT;

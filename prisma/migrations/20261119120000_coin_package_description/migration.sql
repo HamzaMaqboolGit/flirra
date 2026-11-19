@@ -1,0 +1,1 @@
+ALTER TABLE "CoinPackage" ADD COLUMN "description" TEXT NOT NULL DEFAULT '';

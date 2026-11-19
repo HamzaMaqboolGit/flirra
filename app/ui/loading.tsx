@@ -1,0 +1,23 @@
+'use client';
+
+import type { ReactNode } from 'react';
+
+type LoaderProps = { label?: string; size?: 'sm' | 'md' | 'lg'; className?: string };
+
+export function VeloraLoader({ label = 'Loading', size = 'md', className = '' }: LoaderProps) {
+  return <span className={`velora-loader velora-loader-${size} ${className}`.trim()} role="status" aria-label={label}><i/><i/><i/><span className="velora-loader-mark" aria-hidden="true">v</span></span>;
+}
+
+function SkeletonBlock({ className = '', children, ...props }: { className?: string; children?: ReactNode; [key: string]: unknown }) {
+  return <span className={`velora-skeleton ${className}`.trim()} aria-hidden="true" {...props}>{children}</span>;
+}
+
+export function CardSkeleton({ className = '' }: { className?: string }) { return <div className={`velora-card-skeleton ${className}`} aria-hidden="true"><SkeletonBlock className="velora-skeleton-media"/><span><SkeletonBlock className="velora-skeleton-line is-long"/><SkeletonBlock className="velora-skeleton-line is-medium"/><SkeletonBlock className="velora-skeleton-line is-short"/></span></div>; }
+export function ProfileSkeleton() { return <div className="velora-profile-skeleton" aria-label="Loading profile"><aside><SkeletonBlock className="velora-skeleton-avatar is-large"/><SkeletonBlock className="velora-skeleton-line is-long"/><SkeletonBlock className="velora-skeleton-line is-medium"/></aside><nav>{Array.from({length:6},(_,i)=><SkeletonBlock key={i} className="velora-skeleton-nav"/>)}</nav><section><SkeletonBlock className="velora-skeleton-line is-long"/><div className="velora-skeleton-panel"><SkeletonBlock className="velora-skeleton-line is-medium"/><SkeletonBlock className="velora-skeleton-line is-long"/><SkeletonBlock className="velora-skeleton-line is-short"/></div><div className="velora-skeleton-gallery">{Array.from({length:3},(_,i)=><SkeletonBlock key={i} className="velora-skeleton-media"/>)}</div></section></div>; }
+export function PageSkeleton({ rows = 3, label = 'Loading content' }: { rows?: number; label?: string }) { return <div className="velora-page-skeleton" role="status" aria-label={label}>{Array.from({length:rows},(_,i)=><div className="velora-skeleton-row" key={i}><SkeletonBlock className="velora-skeleton-avatar"/><span><SkeletonBlock className="velora-skeleton-line is-medium"/><SkeletonBlock className="velora-skeleton-line is-long"/></span></div>)}</div>; }
+export function ChatSkeleton() { return <div className="velora-chat-skeleton" role="status" aria-label="Loading messages"><aside>{Array.from({length:5},(_,i)=><div className="velora-skeleton-row" key={i}><SkeletonBlock className="velora-skeleton-avatar"/><span><SkeletonBlock className="velora-skeleton-line is-medium"/><SkeletonBlock className="velora-skeleton-line is-short"/></span></div>)}</aside><section><SkeletonBlock className="velora-skeleton-line is-medium"/><SkeletonBlock className="velora-skeleton-bubble"/><SkeletonBlock className="velora-skeleton-bubble is-right"/><SkeletonBlock className="velora-skeleton-bubble"/></section></div>; }
+export function TableSkeleton({ rows = 5, columns = 4 }: { rows?: number; columns?: number }) { return <div className="velora-table-skeleton" role="status" aria-label="Loading table">{Array.from({length:rows},(_,row)=><div key={row}>{Array.from({length:columns},(_,col)=><SkeletonBlock key={col} className="velora-skeleton-line is-medium"/>)}</div>)}</div>; }
+export function MediaSkeleton({ className = '' }: { className?: string }) { return <SkeletonBlock className={`velora-media-skeleton ${className}`}/>; }
+export function ButtonLoader({ label = 'Working…' }: { label?: string }) { return <span className="velora-button-loader"><VeloraLoader size="sm" label={label}/><span>{label}</span></span>; }
+export function UploadProgress({ fileName, progress, onCancel }: { fileName: string; progress: number | null; onCancel?: () => void }) { return <div className="velora-upload-progress" role="status"><div><b>{fileName}</b><span>{progress === null ? 'Uploading…' : `${Math.round(Math.max(0, Math.min(progress, 100)))}%`}</span></div>{progress !== null && <progress max={100} value={progress}/ >}{onCancel && <button type="button" onClick={onCancel}>Cancel</button>}</div>; }
+export function VideoCallConnectingLoader({ avatar, label = 'Connecting…', onCancel }: { avatar?: string | null; label?: string; onCancel?: () => void }) { return <div className="velora-call-connecting" role="status"><span className="velora-call-rings"><i/><i/><span>{avatar ? <img src={avatar} alt=""/> : <span className="velora-call-avatar-fallback">v</span>}</span></span><b>{label}</b>{onCancel && <button type="button" onClick={onCancel}>Cancel</button>}</div>; }

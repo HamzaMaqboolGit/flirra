@@ -1,0 +1,8 @@
+import { Prisma } from '@prisma/client';
+import { prisma } from '@/lib/db';
+import { guard } from '@/lib/guard';
+import { fail, ok } from '@/lib/http';
+import { defaultTheme, validTheme } from '@/lib/themes';
+export const dynamic='force-dynamic';
+export async function GET(){const {user,error}=await guard(['ADMIN'],{allowSuspended:true,permission:'settings'});if(!user)return error;const rows=await prisma.platformSetting.findMany({where:{key:{in:['theme.frontend','theme.admin']}}});const frontend=rows.find(x=>x.key==='theme.frontend')?.value,admin=rows.find(x=>x.key==='theme.admin')?.value;return ok({frontend:validTheme(frontend)?frontend:defaultTheme,admin:validTheme(admin)?admin:defaultTheme})}
+export async function PUT(req:Request){const {user,error}=await guard(['ADMIN'],{allowSuspended:true,permission:'settings'});if(!user)return error;const body=await req.json().catch(()=>null);if(!body||!validTheme(body.frontend)||!validTheme(body.admin))return fail('Both theme palettes must contain valid HEX colors and a supported mode.');try{await prisma.$transaction([prisma.platformSetting.upsert({where:{key:'theme.frontend'},create:{key:'theme.frontend',value:body.frontend as Prisma.InputJsonValue},update:{value:body.frontend as Prisma.InputJsonValue}}),prisma.platformSetting.upsert({where:{key:'theme.admin'},create:{key:'theme.admin',value:body.admin as Prisma.InputJsonValue},update:{value:body.admin as Prisma.InputJsonValue}}),prisma.adminAuditLog.create({data:{adminId:user.id,action:'THEME_SETTINGS_UPDATED',metadata:{scopes:['frontend','admin']}}})]);return ok({saved:true})}catch{ return fail('Could not save the theme settings.',500)}}

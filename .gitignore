@@ -1,0 +1,11 @@
+node_modules/
+.next/
+.next-dev/
+*.tsbuildinfo
+.env
+.env.*.local
+public/uploads/
+private_uploads/
+.DS_Store
+coverage/
+.playwright-mcp/
