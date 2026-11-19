@@ -1,7 +1,7 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:crypto';
 import { prisma } from './db';
 
-const KEYS = ['stripe.secretKey', 'stripe.webhookSecret', 'stripe.connectSecret', 'stripe.publishableKey', 'paypal.clientSecret', 'paypal.webhookId', 'adapty.apiKey', 'adapty.webhookSecret', 'auth.google.clientSecret', 'auth.apple.privateKey', 'rtc.turnCredential'] as const;
+const KEYS = ['stripe.secretKey', 'stripe.webhookSecret', 'stripe.connectSecret', 'stripe.publishableKey', 'paypal.clientSecret', 'paypal.webhookId', 'adapty.apiKey', 'adapty.webhookSecret', 'auth.google.clientSecret', 'auth.apple.privateKey', 'rtc.turnCredential', 'translation.apiKey'] as const;
 type SecretKey = typeof KEYS[number];
 
 function encryptionKey() {
@@ -94,7 +94,7 @@ export async function approveStripeLive(adminId?: string) {
   });
 }
 
-export async function readProviderSecret(key: 'paypal.clientSecret'|'paypal.webhookId'|'adapty.apiKey'|'adapty.webhookSecret') {
+export async function readProviderSecret(key: 'paypal.clientSecret'|'paypal.webhookId'|'adapty.apiKey'|'adapty.webhookSecret'|'translation.apiKey') {
   const row = await prisma.platformSetting.findUnique({ where: { key } });
   const value = row?.value;
   if (typeof value === 'string' && value.startsWith('v1:')) return decrypt(value);
@@ -125,12 +125,12 @@ export async function readAuthProviderFlags(provider:'google'|'apple'){
  const rows=await prisma.platformSetting.findMany({where:{key:{in:keys}},select:{key:true,value:true}});return Object.fromEntries(rows.map(row=>[row.key,row.value]));
 }
 
-export async function providerSecretStatus(keys: Array<'paypal.clientSecret'|'paypal.webhookId'|'adapty.apiKey'|'adapty.webhookSecret'>) {
+export async function providerSecretStatus(keys: Array<'paypal.clientSecret'|'paypal.webhookId'|'adapty.apiKey'|'adapty.webhookSecret'|'translation.apiKey'>) {
   const rows = await prisma.platformSetting.findMany({ where: { key: { in: keys } }, select: { key: true, value: true } });
   return Object.fromEntries(keys.map(key => [key, rows.some(row => row.key === key && typeof row.value === 'string' && String(row.value).startsWith('v1:'))]));
 }
 
-export async function saveProviderSettings(input: { provider: 'paypal'|'adapty'; values: Record<string, unknown>; secrets: Record<string, string|undefined>; action: string }, adminId: string) {
+export async function saveProviderSettings(input: { provider: 'paypal'|'adapty'|'translation'; values: Record<string, unknown>; secrets: Record<string, string|undefined>; action: string }, adminId: string) {
   const values = { ...input.values };
   for (const [key, value] of Object.entries(input.secrets)) if (value) values[key] = encrypt(value);
   await prisma.$transaction(async tx => {
@@ -139,8 +139,8 @@ export async function saveProviderSettings(input: { provider: 'paypal'|'adapty';
   });
 }
 
-export async function readProviderFlags(provider: 'paypal'|'adapty') {
-  const keys = provider === 'paypal' ? ['paypal.enabled','paypal.environment','paypal.clientId'] : ['adapty.enabled','adapty.publicKey'];
+export async function readProviderFlags(provider: 'paypal'|'adapty'|'translation') {
+  const keys = provider === 'paypal' ? ['paypal.enabled','paypal.environment','paypal.clientId'] : provider === 'adapty' ? ['adapty.enabled','adapty.publicKey'] : ['translation.enabled','translation.url'];
   const rows = await prisma.platformSetting.findMany({ where: { key: { in: keys } }, select: { key: true, value: true } });
   return Object.fromEntries(rows.map(row => [row.key, row.value]));
 }

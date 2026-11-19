@@ -12,6 +12,8 @@ const schema=z.discriminatedUnion('action',[
  z.object({action:z.literal('save-stripe-link'),enabled:z.boolean()}),
  z.object({action:z.literal('save-adapty'),enabled:z.boolean(),publicKey:z.string().max(255),apiKey:z.string().max(500).optional(),webhookSecret:z.string().max(500).optional()}),
  z.object({action:z.literal('test-adapty'),apiKey:z.string().max(500).optional()}),
+ z.object({action:z.literal('save-translation'),enabled:z.boolean(),url:z.string().url().max(500),apiKey:z.string().max(500).optional()}),
+ z.object({action:z.literal('test-translation'),url:z.string().url().max(500).optional(),apiKey:z.string().max(500).optional()}),
 ]);
 
 function optionalHistory<T>(query:Promise<T>,fallback:T):Promise<T>{return Promise.race([query.catch(()=>fallback),new Promise<T>(resolve=>{const timer=setTimeout(()=>resolve(fallback),2500);timer.unref?.()})])}
