@@ -34,6 +34,17 @@ export default function LandingPage({ cmsContent, siteName = 'Velora', logoUrl =
   const [actionMessage, setActionMessage] = useState('');
   const [coinMessage, setCoinMessage] = useState('');
   const [buyingId, setBuyingId] = useState<string | null>(null);
+  const [heroSlide, setHeroSlide] = useState(0);
+  const heroSlides = [
+    { src: '/velora-landing/hero/clean/portrait-emma.webp', alt: 'Emma on a live video date' },
+    { src: '/velora-landing/hero/clean/portrait-noah.webp', alt: 'Noah on a live video date' },
+    { src: '/velora-landing/hero/clean/portrait-sophia.webp', alt: 'Sophia on a live video date' },
+  ];
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setHeroSlide(current => (current + 1) % heroSlides.length), 5200);
+    return () => window.clearInterval(timer);
+  }, [heroSlides.length]);
 
   useEffect(() => {
     const syncVisibility = () => document.documentElement.classList.toggle('is-document-hidden', document.visibilityState !== 'visible');
@@ -228,7 +239,16 @@ export default function LandingPage({ cmsContent, siteName = 'Velora', logoUrl =
             <div className="vl-trust-row"><span><Zap size={16} /> Free to join</span><span><ShieldCheck size={16} /> Safe &amp; private</span><span><Users size={16} /> Real people only</span></div>
           </div>
         </div>
-        <div className="vl-hero-image"><img src={cmsContent.hero.image} alt={cmsContent.hero.imageAlt} fetchPriority="high" /></div>
+        <div className="vl-hero-image" aria-label="Live video dating profiles">
+          <div className="vl-hero-carousel-track">
+            {heroSlides.map((slide, index) => { const offset = (index - heroSlide + heroSlides.length) % heroSlides.length; return <img key={slide.src} className={`vl-hero-slide vl-hero-slide-${offset}`} src={slide.src} alt={slide.alt} fetchPriority={index === 0 ? 'high' : 'auto'} />; })}
+          </div>
+          <div className="vl-hero-carousel-controls">
+            <button type="button" onClick={() => setHeroSlide(current => (current + heroSlides.length - 1) % heroSlides.length)} aria-label="Previous profile">‹</button>
+            <div>{heroSlides.map((slide, index) => <button key={slide.src} type="button" className={index === heroSlide ? 'is-active' : ''} onClick={() => setHeroSlide(index)} aria-label={`Show profile ${index + 1}`} />)}</div>
+            <button type="button" onClick={() => setHeroSlide(current => (current + 1) % heroSlides.length)} aria-label="Next profile">›</button>
+          </div>
+        </div>
       </section>
 
       <LiveMetrics metrics={publicData?.metrics ?? null} loading={loading} />
