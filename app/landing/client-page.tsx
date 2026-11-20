@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { io } from 'socket.io-client';
-import { ArrowRight, ShieldCheck, Globe2, Users, Video, Zap } from 'lucide-react';
+import { ArrowRight, ShieldCheck, Users, Video, Zap } from 'lucide-react';
 import CountrySelect from '../country-select';
 import { countryCode, isCountry } from '@/lib/countries';
 import { readApiJson } from '@/lib/client-api';
@@ -243,7 +243,7 @@ export default function LandingPage({ cmsContent, siteName = 'Velora', logoUrl =
             <div className="vl-gender-select" role="group" aria-label="Matching preference">
               {([{ value: 'MALE', icon: '♂', label: 'Men' }, { value: 'FEMALE', icon: '♀', label: 'Women' }, { value: 'EVERYONE', icon: '✧', label: 'Everyone' }] as const).map(option => <button key={option.value} type="button" className={genderTarget === option.value ? 'is-selected' : ''} aria-pressed={genderTarget === option.value} onClick={() => { setGenderTarget(option.value); setError(''); }}><span aria-hidden="true">{option.icon}</span><span>{option.label}</span></button>)}
             </div>
-            <label className="vl-country-select"><Globe2 size={17} /><CountrySelect id="landing-country" value={country} onChange={setCountry} placeholder="Search countries" worldwide /></label>
+            <label className="vl-country-select"><CountrySelect id="landing-country" value={country} onChange={setCountry} placeholder="Search countries" worldwide /></label>
             </div>
             <button className="vl-start-button" onClick={handleHeroAction} disabled={busy}><Video size={18} />{busy ? 'Checking your account…' : cmsContent.hero.ctaText}<ArrowRight size={17} /></button>
             {error && <p className="vl-form-message" role="alert">{error}</p>}
