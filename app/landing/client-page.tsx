@@ -10,6 +10,13 @@ import { CoinPackage, CoinShowcase, Discovery, LandingNav, LandingPerson, LiveMe
 import type { CmsContent } from '@/lib/cms';
 import { PENDING_PURCHASE_KEY } from '@/lib/purchase-intent';
 
+const FALLBACK_PACKAGES: CoinPackage[] = [
+  { id: 'fallback-spark', name: 'Spark', coins: 100, priceCents: 499, currency: 'USD', imageUrl: '/velora-landing/coins/clean/spark.webp', cardColor: 'spark' },
+  { id: 'fallback-glow', name: 'Glow', coins: 350, priceCents: 1499, currency: 'USD', imageUrl: '/velora-landing/coins/clean/glow.webp', cardColor: 'glow' },
+  { id: 'fallback-aura', name: 'Aura', coins: 800, priceCents: 2999, currency: 'USD', imageUrl: '/velora-landing/coins/clean/aura.webp', cardColor: 'aura', popular: true },
+  { id: 'fallback-noir', name: 'Noir', coins: 1800, priceCents: 5999, currency: 'USD', imageUrl: '/velora-landing/coins/clean/noir.webp', cardColor: 'noir' },
+];
+
 type PublicData = {
   packages: CoinPackage[];
   metrics: { totalMembers: number; totalVideoCalls: number; countriesReached: number; totalConnections: number };
@@ -35,6 +42,8 @@ export default function LandingPage({ cmsContent, siteName = 'Velora', logoUrl =
   const [coinMessage, setCoinMessage] = useState('');
   const [buyingId, setBuyingId] = useState<string | null>(null);
   const [heroSlide, setHeroSlide] = useState(0);
+  const [heroPaused, setHeroPaused] = useState(false);
+  const [heroTouchStart, setHeroTouchStart] = useState<number | null>(null);
   const heroSlides = [
     { src: '/velora-landing/hero/clean/portrait-emma.webp', alt: 'Emma on a live video date' },
     { src: '/velora-landing/hero/clean/portrait-noah.webp', alt: 'Noah on a live video date' },
@@ -42,9 +51,10 @@ export default function LandingPage({ cmsContent, siteName = 'Velora', logoUrl =
   ];
 
   useEffect(() => {
+    if (heroPaused) return;
     const timer = window.setInterval(() => setHeroSlide(current => (current + 1) % heroSlides.length), 5200);
     return () => window.clearInterval(timer);
-  }, [heroSlides.length]);
+  }, [heroPaused, heroSlides.length]);
 
   useEffect(() => {
     const syncVisibility = () => document.documentElement.classList.toggle('is-document-hidden', document.visibilityState !== 'visible');
@@ -206,6 +216,7 @@ export default function LandingPage({ cmsContent, siteName = 'Velora', logoUrl =
   }
 
   async function buyCoins(packageId: string) {
+    if (packageId.startsWith('fallback-')) { setCoinMessage('Purchases temporarily unavailable until the package catalog is connected.'); return; }
     setBuyingId(packageId);
     setCoinMessage('');
     try {
@@ -239,10 +250,11 @@ export default function LandingPage({ cmsContent, siteName = 'Velora', logoUrl =
             <div className="vl-trust-row"><span><Zap size={16} /> Free to join</span><span><ShieldCheck size={16} /> Safe &amp; private</span><span><Users size={16} /> Real people only</span></div>
           </div>
         </div>
-        <div className="vl-hero-image" aria-label="Live video dating profiles">
+        <div className="vl-hero-image" aria-label="Live video dating profile previews" onMouseEnter={() => setHeroPaused(true)} onMouseLeave={() => setHeroPaused(false)} onFocusCapture={() => setHeroPaused(true)} onBlurCapture={() => setHeroPaused(false)} onTouchStart={event => setHeroTouchStart(event.touches[0]?.clientX ?? null)} onTouchEnd={event => { if (heroTouchStart == null) return; const delta = (event.changedTouches[0]?.clientX ?? heroTouchStart) - heroTouchStart; if (Math.abs(delta) > 40) setHeroSlide(current => (current + (delta < 0 ? 1 : heroSlides.length - 1)) % heroSlides.length); setHeroTouchStart(null); }}>
           <div className="vl-hero-carousel-track">
             {heroSlides.map((slide, index) => { const offset = (index - heroSlide + heroSlides.length) % heroSlides.length; return <img key={slide.src} className={`vl-hero-slide vl-hero-slide-${offset}`} src={slide.src} alt={slide.alt} fetchPriority={index === 0 ? 'high' : 'auto'} />; })}
           </div>
+          {heroSlides.map((slide, index) => { const offset = (index - heroSlide + heroSlides.length) % heroSlides.length; const profile = [['Emma, 24', '🇺🇸 United States'], ['Noah, 27', '🇬🇧 United Kingdom'], ['Sophia, 26', '🇨🇦 Canada']][index]; return <div key={`${slide.src}-meta`} className={`vl-hero-card-meta vl-hero-card-meta-${offset}`}><b>{profile[0]} {index === 0 && <span aria-hidden="true">✦</span>}</b><small>{profile[1]}</small><i>Preview</i></div>; })}
           <div className="vl-hero-carousel-controls">
             <button type="button" onClick={() => setHeroSlide(current => (current + heroSlides.length - 1) % heroSlides.length)} aria-label="Previous profile">‹</button>
             <div>{heroSlides.map((slide, index) => <button key={slide.src} type="button" className={index === heroSlide ? 'is-active' : ''} onClick={() => setHeroSlide(index)} aria-label={`Show profile ${index + 1}`} />)}</div>
@@ -256,7 +268,7 @@ export default function LandingPage({ cmsContent, siteName = 'Velora', logoUrl =
       {cmsContent.sections.discover.visible&&<Discovery people={publicData?.featuredPeople || []} country={filterCountry} setCountry={setFilterCountry} onlineCount={onlineNow} loading={loading} unavailable={!loading && !publicData} onConnect={person => void connect(person)} onMessage={person => void message(person)} content={cmsContent.sections.discover} />}
       {actionMessage && <p className="vl-action-message" role="status">{actionMessage}</p>}
 
-      {cmsContent.sections.coins.visible&&<CoinShowcase packages={coinPackages ?? publicData?.packages ?? []} loading={packagesLoading} enabled={Boolean(publicData?.paymentsEnabled)} coinsPerMinute={publicData?.coinsPerMinute ?? null} onBuy={id => void buyCoins(id)} buyingId={buyingId} content={cmsContent.sections.coins} />}
+      {cmsContent.sections.coins.visible&&<CoinShowcase packages={coinPackages?.length ? coinPackages : publicData?.packages?.length ? publicData.packages : FALLBACK_PACKAGES} fallback={!coinPackages?.length && !publicData?.packages?.length} loading={packagesLoading} enabled={Boolean(publicData?.paymentsEnabled)} coinsPerMinute={publicData?.coinsPerMinute ?? null} onBuy={id => void buyCoins(id)} buyingId={buyingId} content={cmsContent.sections.coins} />}
       {coinMessage && <p className="vl-action-message" role="alert">{coinMessage}</p>}
       <SafetyAndFooter content={cmsContent} siteName={brand.siteName} logoUrl={brand.logoUrl} />
     </main>

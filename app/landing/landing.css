@@ -67,6 +67,15 @@
 .vl-hero-slide-0 { z-index: 3; transform: translateX(-50%) scale(1); opacity: 1; }
 .vl-hero-slide-1 { z-index: 2; transform: translateX(28%) scale(.82) rotate(6deg); opacity: .82; filter: saturate(.9); }
 .vl-hero-slide-2 { z-index: 1; transform: translateX(-128%) scale(.82) rotate(-6deg); opacity: .82; filter: saturate(.9); }
+.vl-hero-card-meta { position: absolute; z-index: 4; bottom: 17%; left: 50%; width: 45%; display: grid; gap: 2px; color: #fff; text-shadow: 0 2px 8px rgba(0,0,0,.5); pointer-events: none; transition: transform .45s ease, opacity .45s ease; }
+.vl-hero-card-meta-0 { transform: translateX(-50%); opacity: 1; }
+.vl-hero-card-meta-1 { transform: translateX(28%) scale(.82) rotate(6deg); opacity: .9; }
+.vl-hero-card-meta-2 { transform: translateX(-128%) scale(.82) rotate(-6deg); opacity: .9; }
+.vl-hero-card-meta b { font-size: clamp(13px, 1.3vw, 20px); }
+.vl-hero-card-meta b span { color: #4d8fff; }
+.vl-hero-card-meta small { font-size: clamp(9px, .9vw, 13px); }
+.vl-hero-card-meta i { width: max-content; margin-top: 4px; padding: 2px 7px; border-radius: 99px; background: rgba(37,25,50,.58); font-size: 8px; font-style: normal; }
+.vl-package-notice { position: absolute; z-index: 3; top: -25px; right: 8px; margin: 0; color: var(--vl-muted); font-size: 10px; }
 .vl-hero-carousel-controls { position: absolute; z-index: 5; right: 8%; bottom: 6%; left: 8%; display: flex; align-items: center; justify-content: space-between; }
 .vl-hero-carousel-controls > button { width: 38px; height: 38px; display: grid; place-items: center; border: 1px solid #eadcf5; border-radius: 50%; background: rgba(255,255,255,.94); color: var(--vl-purple); font-size: 28px; line-height: 1; box-shadow: 0 8px 18px rgba(51,27,76,.14); }
 .vl-hero-carousel-controls > div { display: flex; gap: 7px; }
