@@ -37,7 +37,7 @@ TURN variables, Resend, translation, PayPal approval, Adapty approval, and Strip
 
 ## Deploy and verify
 
-1. Create the Hostinger PostgreSQL database and place its URL in `DATABASE_URL`.
+1. Configure the Supabase PostgreSQL connection in Hostinger’s `DATABASE_URL` environment variable. The repository’s local `.env` is intentionally separate and may point to localhost.
 2. Add the variables from `.env.production.example` in Hostinger’s environment editor.
 3. Install dependencies and generate the client: `npm ci && npm run db:generate`.
 4. Apply committed migrations exactly once with `npm run db:migrate:deploy` (equivalent to `npx prisma migrate deploy`). This is a deployment step, not a web-request or application-startup hook.
