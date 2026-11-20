@@ -2,7 +2,7 @@
 
 ## Values supplied by Hostinger
 
-- `DATABASE_URL`: PostgreSQL connection string for the production database.
+- `DATABASE_URL`: PostgreSQL connection string for the production database. Keep this variable name unchanged. For a Supabase pooler URL, configure a conservative Prisma pool (for example `connection_limit=3&pool_timeout=20`) in that URL’s query string, preserving any existing parameters and URL-encoding values as required.
 - `APP_URL` and `NEXT_PUBLIC_APP_URL`: the deployed HTTPS origin, with no trailing path.
 - `HOST=0.0.0.0` and the port required by the Hostinger Node.js application runner.
 
