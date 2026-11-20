@@ -39,9 +39,13 @@ TURN variables, Resend, translation, PayPal approval, Adapty approval, and Strip
 
 1. Create the Hostinger PostgreSQL database and place its URL in `DATABASE_URL`.
 2. Add the variables from `.env.production.example` in Hostinger’s environment editor.
-3. Run `npm install`, `npm run db:generate`, and the project’s production migration process against the production database.
-4. Build with `npm run build` and start with `npm run start`.
-5. Confirm the health endpoint and authenticated sign-in.
-6. In admin payment settings, test Stripe credentials and save them; do not paste secrets into frontend settings.
-7. Send a Stripe test-mode Checkout session and verify the signed webhook before enabling live mode.
-8. After any environment change, restart the Node.js application; configuration is read at process start.
+3. Install dependencies and generate the client: `npm ci && npm run db:generate`.
+4. Apply committed migrations exactly once with `npm run db:migrate:deploy` (equivalent to `npx prisma migrate deploy`). This is a deployment step, not a web-request or application-startup hook.
+5. If the Supabase URL in the running app is a transaction/session pooler URL and migration DDL is rejected, run the same command once with Supabase’s direct database connection supplied only for that command: `DATABASE_URL="$SUPABASE_DIRECT_URL" npx prisma migrate deploy`. Keep the application’s normal runtime `DATABASE_URL` unchanged afterward; do not add either URL to Git.
+6. Build with `npm run build` and start with `npm run start`.
+7. Confirm the health endpoint and authenticated sign-in.
+8. In admin payment settings, test Stripe credentials and save them; do not paste secrets into frontend settings.
+9. Send a Stripe test-mode Checkout session and verify the signed webhook before enabling live mode.
+10. After any environment change, restart the Node.js application; configuration is read at process start.
+
+The two currently pending migrations are non-destructive: `20261120110000_postgres_coordination` creates only the PostgreSQL coordination table/index, and `20261120110000_seed_default_coin_packages` inserts the reference catalog only when `CoinPackage` is empty. Neither migration resets, drops, or updates existing users, wallets, payments, or transactions.
