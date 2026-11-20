@@ -857,3 +857,12 @@ model ContactMessage {
   message   String
   createdAt DateTime @default(now())
 }
+
+model RateLimitBucket {
+  key         String   @id
+  count       Int      @default(0)
+  windowStart DateTime
+  expiresAt   DateTime
+
+  @@index([expiresAt])
+}
