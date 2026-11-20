@@ -3,6 +3,10 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
+  "overrides": {
+    "deepmerge-ts": "^8.0.0",
+    "postcss": "^8.5.23"
+  },
   "scripts": {
     "dev": "node --import tsx server/bootstrap.mjs",
     "build": "next build",
