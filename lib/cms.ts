@@ -39,10 +39,14 @@ export const cmsPageCatalog = [
 export function cmsContent(value: unknown): CmsContent {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return defaultCmsContent;
   const source = value as Partial<CmsContent>;
+  const heroSource = (source.hero || {}) as Partial<CmsContent['hero']>;
+  const heroImage = heroSource.image === '/velora-landing/hero/glamorous-purple-lit-bedroom.png'
+    ? defaultCmsContent.hero.image
+    : heroSource.image;
   return {
     ...defaultCmsContent,
     ...source,
-    hero: { ...defaultCmsContent.hero, ...(source.hero || {}) },
+    hero: { ...defaultCmsContent.hero, ...heroSource, ...(heroImage ? { image: heroImage } : {}) },
     sections: {
       ...defaultCmsContent.sections,
       ...(source.sections || {}),
