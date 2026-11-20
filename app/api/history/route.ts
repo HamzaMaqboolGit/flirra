@@ -23,8 +23,8 @@ export async function GET(req: Request) {
   const direction = filter === "incoming" ? { recipientId: user.id } : filter === "outgoing" ? { callerId: user.id } : filter === "missed" ? missedCall : {};
   const where = {
     AND: [base, direction, dateFilter ? { createdAt: dateFilter } : {}, query ? { OR: [
-      { caller: { displayName: { contains: query, mode: "insensitive" as const } } },
-      { recipient: { displayName: { contains: query, mode: "insensitive" as const } } },
+      { caller: { displayName: { contains: query } } },
+      { recipient: { displayName: { contains: query } } },
     ] } : {}],
   };
   try {

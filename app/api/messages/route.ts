@@ -13,8 +13,8 @@ export async function GET(req: Request) {
   try {
   const rows = await prisma.conversation.findMany({
     where: { AND: [ { OR: [{ memberAId: user.id }, { memberBId: user.id }] }, ...(q ? [{ OR: [
-      { memberA: { displayName: { contains: q, mode: "insensitive" as const } } },
-      { memberB: { displayName: { contains: q, mode: "insensitive" as const } } },
+      { memberA: { displayName: { contains: q } } },
+      { memberB: { displayName: { contains: q } } },
     ] }] : []) ] },
     orderBy: [{ officialKey: "asc" }, { updatedAt: "desc" }], take: 100,
     include: { memberA: { select: { id: true, displayName: true, status: true, role: true, dateOfBirth: true, profile: { select: { country: true, avatarUrl: true, interests: true, online: true, lastSeenAt: true } } } }, memberB: { select: { id: true, displayName: true, status: true, role: true, dateOfBirth: true, profile: { select: { country: true, avatarUrl: true, interests: true, online: true, lastSeenAt: true } } } }, messages: { orderBy: { createdAt: "desc" }, take: 1 } },
