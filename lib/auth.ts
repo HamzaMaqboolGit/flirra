@@ -77,7 +77,9 @@ async function writeSessionCookie(role: Role, token: string, expiresAt: Date) {
   const jar = await cookies();
   jar.set(role === "ADMIN" ? ADMIN_COOKIE : USER_COOKIE, token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    // Hostinger deployments occasionally omit NODE_ENV; APP_URL still lets us
+    // enforce secure cookies whenever the public site is HTTPS.
+    secure: process.env.NODE_ENV === "production" || process.env.APP_URL?.startsWith("https://") === true,
     sameSite: "lax",
     path: "/",
     expires: expiresAt,
