@@ -3,9 +3,8 @@ import { randomUUID } from "node:crypto";
 import next from "next";
 import { parse } from "node:url";
 import { Server } from "socket.io";
-import { createAdapter } from "@socket.io/redis-adapter";
 import { prisma } from "../lib/db";
-import { redis } from "../lib/redis";
+import { coordination } from "../lib/postgres-coordination";
 import { readCookie, userFromToken } from "../lib/auth";
 import { acceptCall, endCall, liveCallFor, setEmitter, setPublicPresenceEmitter, notifyPublicPresence } from "../lib/calls";
 import { dequeue, recoverAfterBoot, setAvailability, sweep, tryMatch } from "../lib/matchmaking";
@@ -63,9 +62,6 @@ async function publishOnlineMembers() {
 }
 setPublicPresenceEmitter(() => { void publishOnlineMembers(); });
 publicIo.on('connection', socket => { void onlineMembersCount().then(count => socket.emit('presence:members-online', { count })).catch(() => socket.emit('presence:unavailable')); });
-const pub = redis().duplicate();
-const sub = redis().duplicate();
-io.adapter(createAdapter(pub, sub));
 setEmitter((userId, event, payload) => io.to(`user:${userId}`).emit(event, payload));
 
 const grace = new Map<string, NodeJS.Timeout>();
@@ -197,10 +193,10 @@ io.on("connection", async (socket) => {
     if (!call || call.id !== callId || call.status !== "ACTIVE") { acknowledge?.({ ok: false, error: "No accepted call is active" }); return; }
     const participant = await prisma.callParticipant.findFirst({ where: { callId, userId } });
     if (!participant?.consentedAt) { acknowledge?.({ ok: false, error: "Call consent is required" }); return; }
-    await redis().sadd(`ready:${callId}`, userId);
-    await redis().expire(`ready:${callId}`, 60 * 30);
+    await coordination().sadd(`ready:${callId}`, userId);
+    await coordination().expire(`ready:${callId}`, 60 * 30);
     await prisma.callParticipant.updateMany({ where: { callId, userId }, data: { joinedAt: new Date() } });
-    const ready = await redis().scard(`ready:${callId}`);
+    const ready = await coordination().scard(`ready:${callId}`);
     acknowledge?.({ ok: true, ready });
     if (ready >= 2) {
       const { billMinute } = await import("../lib/billing");
@@ -230,9 +226,9 @@ io.on("connection", async (socket) => {
 
   socket.on("disconnect", async () => {
     clearSocketTyping(socket.id);
-    const left = await redis().decr(`conn:${userId}`);
+    const left = await coordination().decr(`conn:${userId}`);
     if (left > 0) return;
-    await redis().del(`conn:${userId}`);
+    await coordination().del(`conn:${userId}`);
     grace.set(userId, setTimeout(async () => {
       grace.delete(userId);
       await setAvailability(userId, false).catch(() => undefined);
@@ -245,8 +241,8 @@ io.on("connection", async (socket) => {
 
   // Register all event handlers before awaiting Redis/DB work so a fast client
   // cannot emit its first event during an unhandled connection setup window.
-  const connections = await redis().incr(`conn:${userId}`);
-  if (connections === 1) await redis().expire(`conn:${userId}`, 60 * 60 * 12);
+  const connections = await coordination().incr(`conn:${userId}`);
+  if (connections === 1) await coordination().expire(`conn:${userId}`, 60 * 60 * 12);
   const pending = grace.get(userId);
   if (pending) clearTimeout(pending);
   grace.delete(userId);

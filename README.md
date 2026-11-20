@@ -1,16 +1,16 @@
 # Velora — random video chat
 
-Velora is an adult-only, one-to-one video chat application. It uses a Next.js App Router frontend, a custom Socket.IO server, PostgreSQL/Prisma for accounts and the financial ledger, Redis for matching/presence/rate limits, and browser WebRTC for calls.
+Velora is an adult-only, one-to-one video chat application. It uses a Next.js App Router frontend, a custom Socket.IO server, PostgreSQL/Prisma for accounts, coordination and the financial ledger, and browser WebRTC for calls.
 
 ## Local development
 
-Requirements: Node.js 20.19+ (Node 22 LTS recommended), npm, Docker Desktop or local PostgreSQL 15+ and Redis 7+.
+Requirements: Node.js 20.19+ (Node 22 LTS recommended), npm, Docker Desktop or local PostgreSQL 15+.
 
 ```sh
 npm install
 cp .env.example .env
 # Set DATABASE_URL, AUTH_SECRET, ADMIN_EMAIL, and ADMIN_PASSWORD in .env.
-docker compose up -d postgres redis
+docker compose up -d postgres
 npm run db:generate
 npm run db:migrate
 npm run db:seed
@@ -36,7 +36,7 @@ Set `PAYMENTS_ENABLED=true`, Stripe test keys, and `STRIPE_WEBHOOK_SECRET` to te
 
 Stripe Connect onboarding requires approved Connect capabilities, `STRIPE_CONNECT_ENABLED=true`, and `STRIPE_SECRET_KEY`; live Connect additionally requires `STRIPE_CONNECT_LIVE=true`. Actual withdrawals also require `PAYOUTS_ENABLED=true`, a connected/verified account, and correctly configured Stripe account/webhook events. No real funds should be handled until the entity, country coverage, identity/age checks, tax obligations, policies, Stripe platform, and payout flows receive business/legal/provider approval. When disabled, checkout and withdrawal APIs return an explicit unavailable response and do not change balances.
 
-Configure `TURN_URL`, `TURN_USERNAME`, and `TURN_CREDENTIAL` for TURN. These static credentials are suitable for local validation only; production should use short-lived TURN credentials from a managed TURN service. STUN-only WebRTC cannot connect every NAT/firewall combination. The app uses direct peer media and does not record video. Production deployment also needs HTTPS, durable PostgreSQL and Redis, backups, monitoring, secure secret management, and a review of age/identity verification requirements for its operating markets.
+Configure `TURN_URL`, `TURN_USERNAME`, and `TURN_CREDENTIAL` for TURN. These static credentials are suitable for local validation only; production should use short-lived TURN credentials from a managed TURN service. STUN-only WebRTC cannot connect every NAT/firewall combination. The app uses direct peer media and does not record video. Production deployment also needs HTTPS, durable PostgreSQL, backups, monitoring, secure secret management, and a review of age/identity verification requirements for its operating markets.
 
 ## Database and deployment
 
@@ -49,7 +49,7 @@ npm run build
 npm start
 ```
 
-`docker-compose.yml` provides PostgreSQL and Redis for local development. Use a managed database/cache and a process manager in production. Do not run multiple independent custom-server instances without shared Redis and a deployment setup that supports Socket.IO Redis adapter connections and sticky/compatible transport routing.
+`docker-compose.yml` provides PostgreSQL for local development. Coordination state is persisted in PostgreSQL. Run one custom-server instance per deployment unless PostgreSQL-backed event fan-out is configured.
 
 ## Checks
 
