@@ -354,7 +354,7 @@ html.is-document-hidden .vl-start-button, html.is-document-hidden .vl-start-butt
   .vl-start-button { width: 100%; min-height: 52px; gap: 8px; font-size: 14px; }
   .vl-consent-box { align-items: flex-start; flex-direction: column; }
   .vl-trust-row { gap: 7px 11px; font-size: 10px; }
-  .vl-hero { background-image: linear-gradient(180deg,rgba(255,255,255,.98) 0%,rgba(255,255,255,.95) 56%,rgba(255,255,255,.63) 82%,rgba(255,255,255,.2) 100%),url('/velora-landing/hero/glamorous-purple-lit-bedroom.png'); background-position:center,62% center; }
+  .vl-hero { background-image: linear-gradient(180deg,rgba(255,255,255,.98) 0%,rgba(255,255,255,.95) 56%,rgba(255,255,255,.63) 82%,rgba(255,255,255,.2) 100%),url('/velora-landing/hero/live-video-dating-carousel.png'); background-position:center,62% center; }
   .vl-filter-row { flex-direction: column; gap: 9px; }
   .vl-country-select { width: 100%; min-height: 47px; }
   .vl-features, .vl-discovery, .vl-coin-section, .vl-safety { width: calc(100% - 28px); }
