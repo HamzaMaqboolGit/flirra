@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/db";
 import { fail, ok } from "@/lib/http";
-import { rateLimit } from "@/lib/redis";
+import { rateLimit, RateLimitUnavailableError } from "@/lib/redis";
 import { clientIp } from "@/lib/utils";
 import { registerSchema, zodError } from "@/lib/validators";
 import { createUserSession, hashPassword } from "@/lib/auth";
@@ -38,6 +38,7 @@ export async function POST(req: Request) {
     await createUserSession(user.id, user.role);
     return ok({ created: true, emailVerified: false });
   } catch (error) {
+    if (error instanceof RateLimitUnavailableError) return fail("Authentication is temporarily unavailable. Please try again shortly.", 503);
     if (typeof error === 'object' && error !== null && 'code' in error && error.code === 'P2002') return fail("An account with that email already exists", 409);
     console.error(error);
     return fail("Could not create the account", 500);

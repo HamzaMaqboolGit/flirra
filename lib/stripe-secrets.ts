@@ -104,13 +104,14 @@ export async function readProviderSecret(key: 'paypal.clientSecret'|'paypal.webh
 export async function readAuthSecret(key: 'auth.google.clientSecret'|'auth.apple.privateKey') {
   const row=await prisma.platformSetting.findUnique({where:{key}});const value=row?.value;
   if(typeof value==='string'&&value.startsWith('v1:'))return decrypt(value);
+  if (key === 'auth.google.clientSecret') return process.env.GOOGLE_CLIENT_SECRET || process.env.AUTH_GOOGLE_CLIENT_SECRET || '';
   return '';
 }
 
 export async function authSecretStatus(){
   const rows=await prisma.platformSetting.findMany({where:{key:{in:['auth.google.clientSecret','auth.apple.privateKey']}},select:{key:true,value:true}});
   const values=new Map(rows.map(row=>[row.key,row.value]));
-  return {google:Boolean(values.get('auth.google.clientSecret')),apple:Boolean(values.get('auth.apple.privateKey'))};
+  return {google:Boolean(values.get('auth.google.clientSecret') || process.env.GOOGLE_CLIENT_SECRET || process.env.AUTH_GOOGLE_CLIENT_SECRET),apple:Boolean(values.get('auth.apple.privateKey'))};
 }
 
 export async function saveAuthSettings(input:{google:{enabled:boolean;clientId:string;clientSecret?:string};apple:{enabled:boolean;clientId:string;teamId:string;keyId:string;privateKey?:string}},adminId:string){
@@ -122,7 +123,15 @@ export async function saveAuthSettings(input:{google:{enabled:boolean;clientId:s
 
 export async function readAuthProviderFlags(provider:'google'|'apple'){
  const keys=provider==='google'?['auth.google.enabled','auth.google.clientId']:['auth.apple.enabled','auth.apple.clientId','auth.apple.teamId','auth.apple.keyId'];
- const rows=await prisma.platformSetting.findMany({where:{key:{in:keys}},select:{key:true,value:true}});return Object.fromEntries(rows.map(row=>[row.key,row.value]));
+ const rows=await prisma.platformSetting.findMany({where:{key:{in:keys}},select:{key:true,value:true}});
+ const values=Object.fromEntries(rows.map(row=>[row.key,row.value]));
+ if (provider === 'google') {
+   const clientId = String(values['auth.google.clientId'] || process.env.GOOGLE_CLIENT_ID || process.env.AUTH_GOOGLE_CLIENT_ID || '');
+   const envConfigured = Boolean((process.env.GOOGLE_CLIENT_ID || process.env.AUTH_GOOGLE_CLIENT_ID) && (process.env.GOOGLE_CLIENT_SECRET || process.env.AUTH_GOOGLE_CLIENT_SECRET));
+   const enabled = values['auth.google.enabled'] === true || (values['auth.google.enabled'] === undefined && (process.env.GOOGLE_OAUTH_ENABLED === 'true' || envConfigured));
+   return {'auth.google.enabled': enabled, 'auth.google.clientId': clientId};
+ }
+ return values;
 }
 
 export async function providerSecretStatus(keys: Array<'paypal.clientSecret'|'paypal.webhookId'|'adapty.apiKey'|'adapty.webhookSecret'|'translation.apiKey'>) {

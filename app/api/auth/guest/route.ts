@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { currentUser, hashPassword, prepareUserSession } from '@/lib/auth';
 import { fail, ok } from '@/lib/http';
-import { rateLimit } from '@/lib/redis';
+import { rateLimit, RateLimitUnavailableError } from '@/lib/redis';
 import { clientIp } from '@/lib/utils';
 import { getSettings } from '@/lib/settings';
 import { ensureOfficialConversations } from '@/lib/support';
@@ -55,6 +55,7 @@ export async function POST(request: Request) {
     await ensureOfficialConversations(id).catch(error => console.error('[guest:official-conversations]', error));
     return ok({ created: true, userId: id, isGuest: true });
   } catch (error) {
+    if (error instanceof RateLimitUnavailableError) return fail('Authentication is temporarily unavailable. Please try again shortly.', 503);
     console.error('[guest:register]', error);
     return fail('Guest access is temporarily unavailable. Please try again.', 503);
   }

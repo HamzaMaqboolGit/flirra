@@ -20,6 +20,14 @@ export function redis() {
   return globalForRedis.redis;
 }
 
+export class RateLimitUnavailableError extends Error {
+  readonly code = "RATE_LIMIT_UNAVAILABLE";
+  constructor() {
+    super("Authentication throttling is unavailable");
+    this.name = "RateLimitUnavailableError";
+  }
+}
+
 export async function rateLimit(key: string, limit: number, windowSec: number) {
   const now = new Date();
   const expiresAt = new Date(now.getTime() + windowSec * 1000);
@@ -44,8 +52,11 @@ export async function rateLimit(key: string, limit: number, windowSec: number) {
     }, { isolationLevel: "Serializable" });
     return result <= limit;
   } catch (error) {
-    console.error("[rate-limit] database operation failed", error instanceof Error ? error.message : "unknown");
-    // Fail closed for auth/security-sensitive throttles.
-    return false;
+    const code = typeof error === "object" && error !== null && "code" in error ? String((error as {code?: unknown}).code) : "UNKNOWN";
+    console.error("[rate-limit] database operation failed", code);
+    // A missing migration or unavailable database is operationally different
+    // from a real limit. Never turn an infrastructure outage into a misleading
+    // 429, and never fail open for authentication throttles.
+    throw new RateLimitUnavailableError();
   }
 }

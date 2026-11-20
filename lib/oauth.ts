@@ -10,7 +10,7 @@ import { safeInternalPath } from '@/lib/redirect';
 export type OAuthProvider='google'|'apple';
 const origin=()=>process.env.APP_URL||process.env.NEXT_PUBLIC_APP_URL||'http://localhost:3100';
 const random=()=>randomBytes(32).toString('base64url');
-const cookieOptions={httpOnly:true as const,secure:process.env.NODE_ENV==='production',sameSite:'lax' as const,path:'/',maxAge:600};
+const cookieOptions={httpOnly:true as const,secure:process.env.NODE_ENV==='production'||process.env.APP_URL?.startsWith('https://')===true,sameSite:'lax' as const,path:'/',maxAge:600};
 export async function beginOAuth(provider:OAuthProvider,next:string|null){
  const flags=await readAuthProviderFlags(provider);const jar=await cookies();const state=random(),nonce=random(),verifier=random();const challenge=createHash('sha256').update(verifier).digest('base64url');
  let url:URL;
