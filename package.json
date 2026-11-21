@@ -9,7 +9,7 @@
   },
   "scripts": {
     "dev": "node --import tsx server/bootstrap.mjs",
-    "build": "next build",
+    "build": "prisma generate && (test \"$RUN_PRISMA_MIGRATIONS\" != \"true\" || prisma migrate deploy) && next build",
     "start": "NODE_ENV=production node --import tsx server/bootstrap.mjs",
     "test": "node --import tsx --test tests/*.test.ts",
     "db:generate": "prisma generate",
